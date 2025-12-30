@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}麻雀スコア管理{% endblock %}</title>
+    <!-- Bootstrap 5 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Bootstrap Icons -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
+    <!-- HTMX -->
+    <script src="https://unpkg.com/htmx.org@1.9.10"></script>
+    <style>
+        :root {
+            --primary-gradient: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            --secondary-gradient: linear-gradient(135deg, #00c9ff 0%, #92fe9d 100%);
+            --success-gradient: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+            --card-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+            --card-shadow-hover: 0 15px 40px rgba(0, 0, 0, 0.15);
+        }
+
+        body {
+            background: linear-gradient(135deg, #e0f2f1 0%, #b2dfdb 100%);
+            min-height: 100vh;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        .navbar {
+            background: var(--primary-gradient) !important;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            padding: 1rem 0;
+        }
+
+        .navbar-brand {
+            font-weight: 700;
+            font-size: 1.5rem;
+            letter-spacing: 0.5px;
+        }
+
+        .card {
+            border: none;
+            border-radius: 20px;
+            box-shadow: var(--card-shadow);
+            transition: all 0.3s ease;
+            overflow: hidden;
+        }
+
+        .card:hover {
+            transform: translateY(-5px);
+            box-shadow: var(--card-shadow-hover);
+        }
+
+        .card-header {
+            background: var(--primary-gradient);
+            color: white;
+            border: none;
+            padding: 1.25rem 1.5rem;
+            font-weight: 600;
+        }
+
+        .card-header h3,
+        .card-header h4 {
+            margin: 0;
+            color: white;
+        }
+
+        .btn-primary {
+            background: var(--primary-gradient);
+            border: none;
+            border-radius: 12px;
+            padding: 0.75rem 2rem;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(30, 60, 114, 0.4);
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(30, 60, 114, 0.6);
+        }
+
+        .btn-success {
+            background: var(--success-gradient);
+            border: none;
+            border-radius: 12px;
+            padding: 0.75rem 2rem;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(79, 172, 254, 0.4);
+        }
+
+        .btn-success:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(79, 172, 254, 0.6);
+        }
+
+        .btn-secondary {
+            border-radius: 12px;
+            padding: 0.75rem 2rem;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+
+        .btn-secondary:hover {
+            transform: translateY(-2px);
+        }
+
+        .table {
+            border-radius: 12px;
+            overflow: hidden;
+        }
+
+        .table thead {
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            color: white;
+        }
+
+        .table thead th {
+            border: none;
+            padding: 1rem;
+            font-weight: 600;
+        }
+
+        .table tbody tr {
+            transition: all 0.2s ease;
+        }
+
+        .table tbody tr:hover {
+            background-color: #f8f9fa;
+            transform: scale(1.01);
+        }
+
+        .table tbody td {
+            padding: 1rem;
+            vertical-align: middle;
+        }
+
+        .table tbody td .stat-card {
+            min-width: 150px;
+        }
+
+        .form-control {
+            border-radius: 10px;
+            border: 2px solid #e0e0e0;
+            padding: 0.75rem 1rem;
+            transition: all 0.3s ease;
+        }
+
+        .form-control:focus {
+            border-color: #667eea;
+            box-shadow: 0 0 0 0.2rem rgba(102, 126, 234, 0.25);
+        }
+
+        .alert {
+            border-radius: 12px;
+            border: none;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        .badge {
+            padding: 0.5rem 1rem;
+            border-radius: 8px;
+            font-weight: 600;
+        }
+
+        .text-success {
+            color: #00c851 !important;
+        }
+
+        .text-danger {
+            color: #ff4444 !important;
+        }
+
+        .hero-card {
+            background: white;
+            border-radius: 24px;
+            padding: 3rem;
+            text-align: center;
+            box-shadow: var(--card-shadow);
+        }
+
+        .hero-card h1 {
+            background: var(--primary-gradient);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            font-weight: 800;
+            font-size: 3rem;
+            margin-bottom: 1rem;
+            color: #1e3c72;
+        }
+
+        .stat-card {
+            background: #f8f9fa;
+            border-radius: 12px;
+            padding: 1rem;
+            margin-bottom: 0.5rem;
+            transition: all 0.3s ease;
+            border: 1px solid #e9ecef;
+        }
+
+        .stat-card:hover {
+            background: #e9ecef;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        .table .stat-card {
+            margin-bottom: 0;
+        }
+
+        .rank-badge {
+            display: inline-block;
+            width: 32px;
+            height: 32px;
+            line-height: 32px;
+            text-align: center;
+            border-radius: 50%;
+            font-weight: 700;
+            color: white;
+        }
+
+        .rank-1 { background: linear-gradient(135deg, #f6d365 0%, #fda085 100%); }
+        .rank-2 { background: linear-gradient(135deg, #c0c0c0 0%, #a0a0a0 100%); }
+        .rank-3 { background: linear-gradient(135deg, #cd7f32 0%, #b87333 100%); }
+        .rank-4 { background: linear-gradient(135deg, #8e8e8e 0%, #6e6e6e 100%); }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .fade-in {
+            animation: fadeIn 0.5s ease;
+        }
+
+        .room-code-badge {
+            background: rgba(255, 255, 255, 0.2);
+            padding: 0.5rem 1rem;
+            border-radius: 12px;
+            font-size: 1.1rem;
+            letter-spacing: 2px;
+        }
+    </style>
+    {% block extra_css %}{% endblock %}
+</head>
+<body>
+    <nav class="navbar navbar-dark">
+        <div class="container-fluid">
+            <span class="navbar-brand mb-0">
+                <i class="bi bi-trophy-fill me-2"></i>麻雀スコア管理
+            </span>
+            {% if room %}
+            <span class="navbar-text">
+                <span class="room-code-badge">
+                    <i class="bi bi-door-open me-2"></i>部屋コード: <strong>{{ room.code }}</strong>
+                </span>
+            </span>
+            {% endif %}
+        </div>
+    </nav>
+
+    <div class="container mt-4 mb-5">
+        {% if messages %}
+            {% for message in messages %}
+                <div class="alert alert-{{ message.tags }} alert-dismissible fade show fade-in" role="alert">
+                    {{ message }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+            {% endfor %}
+        {% endif %}
+
+        {% block content %}{% endblock %}
+    </div>
+
+    <!-- Bootstrap 5 JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    {% block extra_js %}{% endblock %}
+</body>
+</html>
+

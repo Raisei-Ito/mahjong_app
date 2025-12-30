@@ -1,0 +1,44 @@
+{% extends 'mahjong/base.html' %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-8 col-lg-6">
+        <div class="hero-card fade-in">
+            <h1><i class="bi bi-trophy-fill me-3"></i>麻雀スコア管理</h1>
+            <p class="lead text-muted mb-4">新しい部屋を作成するか、既存の部屋コードで入室しましょう。</p>
+            
+            <!-- 部屋コードで入室 -->
+            <div class="mb-4">
+                <form method="post" action="{% url 'mahjong:join_room' %}" class="d-flex gap-2">
+                    {% csrf_token %}
+                    <input type="text" 
+                           class="form-control form-control-lg" 
+                           name="room_code" 
+                           placeholder="部屋コードを入力（例: ABC123）" 
+                           maxlength="6"
+                           style="text-transform: uppercase; letter-spacing: 2px;"
+                           required>
+                    <button type="submit" class="btn btn-primary btn-lg">
+                        <i class="bi bi-box-arrow-in-right me-2"></i>入室
+                    </button>
+                </form>
+            </div>
+            
+            <div class="text-center mb-3">
+                <span class="text-muted">または</span>
+            </div>
+            
+            <!-- 新しい部屋を作成 -->
+            <form method="post" action="{% url 'mahjong:create_room' %}">
+                {% csrf_token %}
+                <div class="d-grid">
+                    <button type="submit" class="btn btn-success btn-lg">
+                        <i class="bi bi-plus-circle me-2"></i>新しい部屋を作る
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+

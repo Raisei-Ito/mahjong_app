@@ -1,0 +1,100 @@
+{% if games_data %}
+<div class="table-responsive">
+    <table class="table">
+        <thead>
+            <tr>
+                <th><i class="bi bi-hash me-2"></i>ゲーム</th>
+                {% for player in players %}
+                <th>
+                    <i class="bi bi-person-fill me-2"></i>{{ player.name }}
+                </th>
+                {% endfor %}
+                <th><i class="bi bi-gear me-2"></i>操作</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for game_data in games_data %}
+            <tr>
+                <td class="align-middle">
+                    <span class="badge bg-primary fs-6">#{{ game_data.game.game_number }}</span>
+                </td>
+                {% for record in game_data.records %}
+                <td>
+                    {% if record %}
+                    <div class="stat-card">
+                        <div class="mb-2">
+                            <span class="rank-badge rank-{{ record.rank }} me-2">{{ record.rank }}</span>
+                            <strong>位</strong>
+                        </div>
+                        <div class="mb-2">
+                            <i class="bi bi-123 me-2 text-primary"></i>
+                            <span class="fw-bold">{{ record.score }}</span>点
+                        </div>
+                        <div class="mb-2">
+                            <i class="bi bi-graph-up me-2 text-success"></i>
+                            <span class="fw-bold {% if record.points >= 0 %}text-success{% else %}text-danger{% endif %}">
+                                {{ record.points|floatformat:1 }}pt
+                            </span>
+                        </div>
+                        {% if record.chip_change != 0 %}
+                        <div>
+                            <i class="bi bi-coin me-2"></i>
+                            <span class="fw-bold text-{% if record.chip_change > 0 %}success{% else %}danger{% endif %}">
+                                {% if record.chip_change > 0 %}+{% endif %}{{ record.chip_change }}チップ
+                            </span>
+                        </div>
+                        {% endif %}
+                    </div>
+                    {% else %}
+                    <div class="text-muted">
+                        <i class="bi bi-dash-circle"></i> データなし
+                    </div>
+                    {% endif %}
+                </td>
+                {% endfor %}
+                <td class="align-middle">
+                    <button type="button" 
+                            class="btn btn-sm btn-outline-danger" 
+                            data-bs-toggle="modal" 
+                            data-bs-target="#deleteGameModal{{ game_data.game.id }}">
+                        <i class="bi bi-trash me-1"></i>削除
+                    </button>
+                    
+                    <!-- ゲーム削除確認モーダル -->
+                    <div class="modal fade" id="deleteGameModal{{ game_data.game.id }}" tabindex="-1">
+                        <div class="modal-dialog">
+                            <div class="modal-content">
+                                <div class="modal-header">
+                                    <h5 class="modal-title">ゲーム記録の削除</h5>
+                                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                                </div>
+                                <div class="modal-body">
+                                    <p>ゲーム #{{ game_data.game.game_number }} を削除しますか？</p>
+                                    <p class="text-danger"><strong>この操作は取り消せません。</strong></p>
+                                </div>
+                                <div class="modal-footer">
+                                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">キャンセル</button>
+                                    <form method="post" action="{% url 'mahjong:delete_game' room.code game_data.game.id %}" class="d-inline">
+                                        {% csrf_token %}
+                                        <button type="submit" class="btn btn-danger">
+                                            <i class="bi bi-trash me-2"></i>削除する
+                                        </button>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% else %}
+<div class="text-center py-5">
+    <i class="bi bi-inbox fs-1 text-muted d-block mb-3"></i>
+    <p class="text-muted fs-5">まだゲームが記録されていません</p>
+    <p class="text-muted">スコアを入力して記録を開始しましょう</p>
+</div>
+{% endif %}
+

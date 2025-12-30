@@ -1,0 +1,134 @@
+{% extends 'mahjong/base.html' %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-8 col-lg-6">
+        <div class="card fade-in">
+            <div class="card-header">
+                <h3><i class="bi bi-gear-fill me-2"></i>部屋設定</h3>
+            </div>
+            <div class="card-body">
+                <div class="alert alert-info mb-4">
+                    <i class="bi bi-info-circle me-2"></i>
+                    部屋コード: <strong class="fs-5">{{ room.code }}</strong>
+                </div>
+                
+                <form method="post">
+                    {% csrf_token %}
+                    
+                    <!-- サシウマ設定 -->
+                    <div class="mb-4">
+                        <h5 class="mb-3"><i class="bi bi-trophy me-2"></i>サシウマ設定</h5>
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="sashi_uma_1_2" class="form-label fw-bold">
+                                    サシウマ 1-2位
+                                </label>
+                                <input type="number" 
+                                       class="form-control" 
+                                       id="sashi_uma_1_2" 
+                                       name="sashi_uma_1_2" 
+                                       value="{{ room.sashi_uma_1_2 }}"
+                                       min="0"
+                                       required>
+                                <small class="text-muted">1位と2位の差（例: 5）</small>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label for="sashi_uma_3_4" class="form-label fw-bold">
+                                    サシウマ 3-4位
+                                </label>
+                                <input type="number" 
+                                       class="form-control" 
+                                       id="sashi_uma_3_4" 
+                                       name="sashi_uma_3_4" 
+                                       value="{{ room.sashi_uma_3_4 }}"
+                                       min="0"
+                                       required>
+                                <small class="text-muted">3位と4位の差（例: 10）</small>
+                            </div>
+                        </div>
+                        <div class="alert alert-secondary">
+                            <strong>現在のウマ:</strong><br>
+                            1位: +{{ room.uma_1st }}pt, 
+                            2位: +{{ room.uma_2nd }}pt, 
+                            3位: {{ room.uma_3rd }}pt, 
+                            4位: {{ room.uma_4th }}pt
+                        </div>
+                    </div>
+                    
+                    <!-- レート設定 -->
+                    <div class="mb-4">
+                        <h5 class="mb-3"><i class="bi bi-calculator me-2"></i>レート設定</h5>
+                        <div class="mb-3">
+                            <label for="rate_type" class="form-label fw-bold">レートタイプ</label>
+                            <select class="form-select" id="rate_type" name="rate_type" onchange="toggleCustomReturnPoints()">
+                                {% for value, label in room.RATE_CHOICES %}
+                                <option value="{{ value }}" {% if room.rate_type == value %}selected{% endif %}>
+                                    {{ label }}
+                                </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="mb-3" id="custom_return_points_div" style="display: {% if room.rate_type == 'custom' %}block{% else %}none{% endif %};">
+                            <label for="custom_return_points" class="form-label fw-bold">カスタム返し点</label>
+                            <input type="number" 
+                                   class="form-control" 
+                                   id="custom_return_points" 
+                                   name="custom_return_points" 
+                                   value="{{ room.custom_return_points }}"
+                                   min="0"
+                                   step="1000">
+                            <small class="text-muted">返し点をカスタムで設定します</small>
+                        </div>
+                        <div class="alert alert-secondary">
+                            <strong>現在の設定:</strong><br>
+                            持ち点: {{ room.starting_points }}点<br>
+                            返し点: {{ room.return_points }}点<br>
+                            オカ: +{{ room.oka_points }}pt (1位のみ)
+                        </div>
+                    </div>
+                    
+                    <!-- 持ち点設定 -->
+                    <div class="mb-4">
+                        <h5 class="mb-3"><i class="bi bi-123 me-2"></i>持ち点設定</h5>
+                        <div class="mb-3">
+                            <label for="starting_points" class="form-label fw-bold">持ち点</label>
+                            <input type="number" 
+                                   class="form-control" 
+                                   id="starting_points" 
+                                   name="starting_points" 
+                                   value="{{ room.starting_points }}"
+                                   min="0"
+                                   step="1000"
+                                   required>
+                            <small class="text-muted">各プレイヤーの初期持ち点</small>
+                        </div>
+                    </div>
+                    
+                    <div class="d-flex gap-2">
+                        <a href="{% url 'mahjong:room_dashboard' room.code %}" class="btn btn-secondary btn-lg flex-fill">
+                            <i class="bi bi-arrow-left me-2"></i>キャンセル
+                        </a>
+                        <button type="submit" class="btn btn-primary btn-lg flex-fill">
+                            <i class="bi bi-check-circle me-2"></i>設定を保存
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function toggleCustomReturnPoints() {
+    const rateType = document.getElementById('rate_type').value;
+    const customDiv = document.getElementById('custom_return_points_div');
+    if (rateType === 'custom') {
+        customDiv.style.display = 'block';
+    } else {
+        customDiv.style.display = 'none';
+    }
+}
+</script>
+{% endblock %}
+

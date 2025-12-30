@@ -1,0 +1,184 @@
+{% extends 'mahjong/base.html' %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+            <h2 class="fw-bold">
+                <i class="bi bi-speedometer2 me-2"></i>ダッシュボード
+            </h2>
+            <div class="d-flex gap-2">
+                <a href="{% url 'mahjong:record_score' room.code %}" class="btn btn-primary btn-lg">
+                    <i class="bi bi-plus-circle me-2"></i>スコアを入力
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 現在の設定表示 -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-body">
+                <div class="row text-center">
+                    <div class="col-md-3 mb-2 mb-md-0">
+                        <small class="text-muted d-block">サシウマ</small>
+                        <strong>{{ room.sashi_uma_1_2 }}-{{ room.sashi_uma_3_4 }}</strong>
+                        <small class="text-muted d-block">(1位+{{ room.uma_1st }}, 2位+{{ room.uma_2nd }}, 3位{{ room.uma_3rd }}, 4位{{ room.uma_4th }})</small>
+                    </div>
+                    <div class="col-md-3 mb-2 mb-md-0">
+                        <small class="text-muted d-block">レート</small>
+                        <strong>
+                            {% if room.rate_type == 'no' %}ノーレート
+                            {% elif room.rate_type == 'ten1' %}テンイチ
+                            {% elif room.rate_type == 'ten2' %}テンニ
+                            {% elif room.rate_type == 'ten3' %}テンサン
+                            {% elif room.rate_type == 'ten5' %}テンゴ
+                            {% elif room.rate_type == 'pin' %}テンピン
+                            {% elif room.rate_type == 'ryanpin' %}テンリャンピン
+                            {% elif room.rate_type == 'upin' %}ウーピン
+                            {% elif room.rate_type == 'dekapin' %}デカピン
+                            {% else %}カスタム{% endif %}
+                        </strong>
+                        <small class="text-muted d-block">({{ room.starting_points }}/{{ room.return_points }})</small>
+                    </div>
+                    <div class="col-md-3 mb-2 mb-md-0">
+                        <small class="text-muted d-block">オカ</small>
+                        <strong>+{{ room.oka_points }}pt</strong>
+                        <small class="text-muted d-block">(1位のみ)</small>
+                    </div>
+                    <div class="col-md-3">
+                        <a href="{% url 'mahjong:room_settings' room.code %}" class="btn btn-sm btn-outline-info">
+                            <i class="bi bi-gear me-1"></i>設定変更
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 操作メニュー -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+                    <div class="d-flex gap-2">
+                        <a href="{% url 'mahjong:index' %}" class="btn btn-outline-primary">
+                            <i class="bi bi-house me-2"></i>トップに戻る
+                        </a>
+                        <a href="{% url 'mahjong:edit_players' room.code %}" class="btn btn-outline-secondary">
+                            <i class="bi bi-people me-2"></i>プレイヤー編集
+                        </a>
+                    </div>
+                    <div>
+                        <button type="button" class="btn btn-outline-danger" data-bs-toggle="modal" data-bs-target="#deleteRoomModal">
+                            <i class="bi bi-trash me-2"></i>部屋を削除
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 部屋削除確認モーダル -->
+<div class="modal fade" id="deleteRoomModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">部屋の削除</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p>本当にこの部屋を削除しますか？</p>
+                <p class="text-danger"><strong>この操作は取り消せません。すべてのゲーム記録とプレイヤー情報が削除されます。</strong></p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">キャンセル</button>
+                <form method="post" action="{% url 'mahjong:delete_room' room.code %}" class="d-inline">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-danger">
+                        <i class="bi bi-trash me-2"></i>削除する
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- プレイヤー統計 -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card fade-in">
+            <div class="card-header">
+                <h4><i class="bi bi-trophy-fill me-2"></i>累計成績</h4>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th><i class="bi bi-person-fill me-2"></i>プレイヤー</th>
+                                <th><i class="bi bi-graph-up me-2"></i>累計ポイント</th>
+                                <th><i class="bi bi-coin me-2"></i>累計チップ</th>
+                                <th><i class="bi bi-calculator me-2"></i>合計</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for stat in player_stats %}
+                            <tr>
+                                <td class="fw-bold">
+                                    <i class="bi bi-person-circle me-2"></i>{{ stat.player.name }}
+                                </td>
+                                <td>
+                                    <span class="badge {% if stat.total_points >= 0 %}bg-success{% else %}bg-danger{% endif %}">
+                                        {{ stat.total_points|floatformat:1 }}pt
+                                    </span>
+                                </td>
+                                <td>
+                                    <span class="badge {% if stat.total_chips >= 0 %}bg-info{% else %}bg-warning{% endif %}">
+                                        {{ stat.total_chips }}チップ
+                                    </span>
+                                </td>
+                                <td>
+                                    <strong class="fs-5 {% if stat.total_points|add:stat.total_chips >= 0 %}text-success{% else %}text-danger{% endif %}">
+                                        {{ stat.total_points|add:stat.total_chips|floatformat:1 }}
+                                    </strong>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ゲーム履歴（HTMXで自動更新） -->
+<div class="row">
+    <div class="col-12">
+        <div class="card fade-in">
+            <div class="card-header">
+                <h4>
+                    <i class="bi bi-clock-history me-2"></i>ゲーム履歴
+                    <small class="ms-2 opacity-75">
+                        <i class="bi bi-arrow-clockwise me-1"></i>5秒ごとに自動更新
+                    </small>
+                </h4>
+            </div>
+            <div class="card-body" 
+                 hx-get="{% url 'mahjong:game_list_partial' room.code %}" 
+                 hx-trigger="every 5s"
+                 hx-swap="innerHTML"
+                 id="game-list-container">
+                {% include 'mahjong/partials/game_list.html' %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+

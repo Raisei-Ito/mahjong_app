@@ -1,0 +1,57 @@
+{% extends 'mahjong/base.html' %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-8 col-lg-6">
+        <div class="card fade-in">
+            <div class="card-header">
+                <h3><i class="bi bi-people-fill me-2"></i>{% if is_edit %}プレイヤー編集{% else %}プレイヤー登録{% endif %}</h3>
+            </div>
+            <div class="card-body">
+                <div class="alert alert-info mb-4">
+                    <i class="bi bi-info-circle me-2"></i>
+                    部屋コード: <strong class="fs-5">{{ room.code }}</strong>
+                </div>
+                <form method="post" action="{% if is_edit %}{% url 'mahjong:edit_players' room.code %}{% else %}{% url 'mahjong:room_setup' room.code %}{% endif %}">
+                    {% csrf_token %}
+                    <div class="row mb-4">
+                        {% for player in players %}
+                        <div class="col-md-6 mb-3">
+                            <label for="player_{{ player.order }}" class="form-label fw-bold">
+                                <i class="bi bi-person-fill me-2"></i>プレイヤー{{ player.order }}
+                            </label>
+                            <input type="text" class="form-control" id="player_{{ player.order }}" name="player_{{ player.order }}" 
+                                   value="{{ player.name }}" 
+                                   placeholder="プレイヤー名を入力"
+                                   required>
+                        </div>
+                        {% empty %}
+                        {% for i in "1234" %}
+                        <div class="col-md-6 mb-3">
+                            <label for="player_{{ i }}" class="form-label fw-bold">
+                                <i class="bi bi-person-fill me-2"></i>プレイヤー{{ i }}
+                            </label>
+                            <input type="text" class="form-control" id="player_{{ i }}" name="player_{{ i }}" 
+                                   placeholder="プレイヤー名を入力"
+                                   required>
+                        </div>
+                        {% endfor %}
+                        {% endfor %}
+                    </div>
+                    <div class="d-flex gap-2">
+                        {% if is_edit %}
+                        <a href="{% url 'mahjong:room_dashboard' room.code %}" class="btn btn-secondary btn-lg flex-fill">
+                            <i class="bi bi-arrow-left me-2"></i>キャンセル
+                        </a>
+                        {% endif %}
+                        <button type="submit" class="btn btn-primary btn-lg {% if is_edit %}flex-fill{% else %}w-100{% endif %}">
+                            <i class="bi bi-check-circle me-2"></i>{% if is_edit %}更新する{% else %}登録してダッシュボードへ{% endif %}
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+

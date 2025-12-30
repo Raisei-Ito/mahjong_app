@@ -1,0 +1,14 @@
+services:
+  - type: web
+    name: mahjong-app
+    env: python
+    buildCommand: chmod +x build.sh && ./build.sh
+    startCommand: gunicorn mahjong_project.wsgi
+    envVars:
+      - key: SECRET_KEY
+        generateValue: true
+      - key: DEBUG
+        value: False
+      - key: ALLOWED_HOSTS
+        sync: false
+
