@@ -121,14 +121,26 @@ def record_score(request, room_code):
                     messages.error(request, f'入力値が無効です: {str(e)}')
                     return redirect('mahjong:record_score', room_code=room_code)
             
-            # 順位を判定（持ち点の高い順）
-            score_records.sort(key=lambda x: x.score, reverse=True)
+            # 順位を判定（持ち点の高い順、同点の場合はプレイヤー順で決定）
+            # 同点時のウマオカ折半なし：同点でも順位を分ける（プレイヤー順で決定）
+            # ソート: 持ち点の高い順、同点の場合はプレイヤー順（orderが小さい方が上位）
+            score_records.sort(key=lambda x: (x.score, -x.player.order), reverse=True)
+            # 順位を1,2,3,4と割り当て（同点でも順位を分ける）
             for rank, record in enumerate(score_records, start=1):
                 record.rank = rank
             
             # ポイントを計算
+            # 【計算フロー】
+            # 1. 素点計算：返し点30,000を基準に (持ち点 - 返し点) / 1000 で計算
+            # 2. ウマ加算：順位に応じたウマを加算（10-20の場合：1位+20, 2位+10, 3位-10, 4位-20）
+            # 3. オカ加算：1位のみ、トップ取りのオカ（20pt）を加算
+            # 注意：素点の合計が0でなくても調整しない（持ち点の合計が返し点×4でないのは正常）
+            
             for record in score_records:
-                # ウマを取得（サシウマから計算）
+                # 1. 素点計算：返し点30,000を基準に計算
+                base_points = (record.score - room.return_points) / 1000
+                
+                # 2. ウマを取得（サシウマから計算）
                 uma_map = {
                     1: room.uma_1st,
                     2: room.uma_2nd,
@@ -137,12 +149,12 @@ def record_score(request, room_code):
                 }
                 uma = uma_map.get(record.rank, 0)
                 
-                # オカ（1位のみ、レートから自動計算）
-                oka = room.oka_points if record.rank == 1 else 0
+                # 3. オカ（1位のみ、トップ取りの固定値を使用）
+                # room.oka_pointsは返し点と持ち点の差（5pt）を返すが、正しくはroom.oka（20pt）を使う
+                oka = room.oka if record.rank == 1 else 0
                 
-                # ポイント計算: (持ち点 - 返し点) / 1000 + ウマ + オカ
-                points = (record.score - room.return_points) / 1000 + uma + oka
-                record.points = points
+                # 最終ポイント計算: 素点 + ウマ + オカ
+                record.points = base_points + uma + oka
             
             # 保存
             for record in score_records:
@@ -172,10 +184,16 @@ def room_dashboard(request, room_code):
         total_chips = sum(
             sr.chip_change for sr in ScoreRecord.objects.filter(player=player)
         )
+        # チップをポイントに換算
+        chip_points = total_chips * room.chip_point_rate
+        # 合計（実際に支払うべき金額をpt×100で表示）
+        total_amount_pt = (total_points + chip_points) * 100
         player_stats.append({
             'player': player,
             'total_points': total_points,
             'total_chips': total_chips,
+            'chip_points': chip_points,
+            'total_amount_pt': total_amount_pt,
         })
     
     # 各ゲームのスコア記録をプレイヤー順に整理（初期表示用）
@@ -302,31 +320,46 @@ def room_settings(request, room_code):
     if request.method == 'POST':
         try:
             # サシウマ設定（バリデーション付き）
-            sashi_uma_1_2 = int(request.POST.get('sashi_uma_1_2', 5))
-            sashi_uma_3_4 = int(request.POST.get('sashi_uma_3_4', 10))
-            if sashi_uma_1_2 < 0 or sashi_uma_1_2 > 1000 or sashi_uma_3_4 < 0 or sashi_uma_3_4 > 1000:
-                raise ValueError("サシウマの値が範囲外です")
-            room.sashi_uma_1_2 = sashi_uma_1_2
-            room.sashi_uma_3_4 = sashi_uma_3_4
+            sashi_uma_type = request.POST.get('sashi_uma_type', '5-10')
+            valid_sashi_uma_types = [choice[0] for choice in Room.SASHI_UMA_CHOICES]
+            if sashi_uma_type not in valid_sashi_uma_types:
+                raise ValueError("無効なサシウマタイプです")
+            room.sashi_uma_type = sashi_uma_type
             
-            # レート設定（バリデーション付き）
+            # カスタムの場合は個別の値を設定
+            if sashi_uma_type == 'custom':
+                sashi_uma_1_2 = int(request.POST.get('sashi_uma_1_2', 5))
+                sashi_uma_3_4 = int(request.POST.get('sashi_uma_3_4', 10))
+                if sashi_uma_1_2 < 0 or sashi_uma_1_2 > 1000 or sashi_uma_3_4 < 0 or sashi_uma_3_4 > 1000:
+                    raise ValueError("サシウマの値が範囲外です")
+                room.sashi_uma_1_2 = sashi_uma_1_2
+                room.sashi_uma_3_4 = sashi_uma_3_4
+            
+            # レート設定（バリデーション付き、参考情報として保持）
             rate_type = request.POST.get('rate_type', 'ten5')
             valid_rate_types = [choice[0] for choice in Room.RATE_CHOICES]
             if rate_type not in valid_rate_types:
                 raise ValueError("無効なレートタイプです")
             room.rate_type = rate_type
             
-            if room.rate_type == 'custom':
-                custom_return_points = int(request.POST.get('custom_return_points', 30000))
-                if custom_return_points < 0 or custom_return_points > 1000000:
-                    raise ValueError("返し点の値が範囲外です")
-                room.custom_return_points = custom_return_points
-            
             # 持ち点設定（バリデーション付き）
             starting_points = int(request.POST.get('starting_points', 25000))
             if starting_points < 0 or starting_points > 1000000:
-                raise ValueError("持ち点の値が範囲外です")
+                raise ValueError("持ち点の値が範囲外です (0-1000000)")
             room.starting_points = starting_points
+            
+            # 返し点設定（バリデーション付き）
+            return_points = int(request.POST.get('return_points', 30000))
+            if return_points < 0 or return_points > 1000000:
+                raise ValueError("返し点の値が範囲外です (0-1000000)")
+            room.return_points = return_points
+            
+            # チップ換算率設定（バリデーション付き）
+            # 入力値はpt単位で直接受け取る
+            chip_point_rate = float(request.POST.get('chip_point_rate', 1.0))
+            if chip_point_rate < 0 or chip_point_rate > 1000:
+                raise ValueError("チップ換算率の値が範囲外です（0-1000pt）")
+            room.chip_point_rate = chip_point_rate
             
             room.save()
             messages.success(request, '設定を更新しました。')

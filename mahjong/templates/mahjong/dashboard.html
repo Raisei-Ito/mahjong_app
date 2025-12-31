@@ -22,12 +22,12 @@
         <div class="card">
             <div class="card-body">
                 <div class="row text-center">
-                    <div class="col-md-3 mb-2 mb-md-0">
+                    <div class="col-md-2 mb-2 mb-md-0">
                         <small class="text-muted d-block">サシウマ</small>
-                        <strong>{{ room.sashi_uma_1_2 }}-{{ room.sashi_uma_3_4 }}</strong>
+                        <strong>{{ room.effective_sashi_uma_1_2 }}-{{ room.effective_sashi_uma_3_4 }}</strong>
                         <small class="text-muted d-block">(1位+{{ room.uma_1st }}, 2位+{{ room.uma_2nd }}, 3位{{ room.uma_3rd }}, 4位{{ room.uma_4th }})</small>
                     </div>
-                    <div class="col-md-3 mb-2 mb-md-0">
+                    <div class="col-md-2 mb-2 mb-md-0">
                         <small class="text-muted d-block">レート</small>
                         <strong>
                             {% if room.rate_type == 'no' %}ノーレート
@@ -43,12 +43,17 @@
                         </strong>
                         <small class="text-muted d-block">({{ room.starting_points }}/{{ room.return_points }})</small>
                     </div>
-                    <div class="col-md-3 mb-2 mb-md-0">
+                    <div class="col-md-2 mb-2 mb-md-0">
                         <small class="text-muted d-block">オカ</small>
                         <strong>+{{ room.oka_points }}pt</strong>
                         <small class="text-muted d-block">(1位のみ)</small>
                     </div>
-                    <div class="col-md-3">
+                    <div class="col-md-2 mb-2 mb-md-0">
+                        <small class="text-muted d-block">チップ換算</small>
+                        <strong>{{ room.chip_point_rate }}pt</strong>
+                        <small class="text-muted d-block">(1枚あたり)</small>
+                    </div>
+                    <div class="col-md-2">
                         <a href="{% url 'mahjong:room_settings' room.code %}" class="btn btn-sm btn-outline-info">
                             <i class="bi bi-gear me-1"></i>設定変更
                         </a>
@@ -141,11 +146,12 @@
                                 <td>
                                     <span class="badge {% if stat.total_chips >= 0 %}bg-info{% else %}bg-warning{% endif %}">
                                         {{ stat.total_chips }}チップ
+                                        <small class="d-block">({{ stat.chip_points|floatformat:1 }}pt)</small>
                                     </span>
                                 </td>
                                 <td>
-                                    <strong class="fs-5 {% if stat.total_points|add:stat.total_chips >= 0 %}text-success{% else %}text-danger{% endif %}">
-                                        {{ stat.total_points|add:stat.total_chips|floatformat:1 }}
+                                    <strong class="fs-5 {% if stat.total_amount_pt >= 0 %}text-success{% else %}text-danger{% endif %}">
+                                        {{ stat.total_amount_pt|floatformat:0 }}pt
                                     </strong>
                                 </td>
                             </tr>

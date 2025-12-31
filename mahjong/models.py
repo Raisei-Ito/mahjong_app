@@ -12,80 +12,101 @@ def generate_room_code():
 class Room(models.Model):
     """部屋モデル"""
     RATE_CHOICES = [
-        ('no', 'ノーレート (25000/25000)'),
-        ('ten1', 'テンイチ (25000/26000)'),
-        ('ten2', 'テンニ (25000/27000)'),
-        ('ten3', 'テンサン (25000/28000)'),
-        ('ten5', 'テンゴ (25000/30000)'),
-        ('pin', 'テンピン (25000/35000)'),
-        ('ryanpin', 'テンリャンピン (25000/45000)'),
-        ('upin', 'ウーピン (25000/75000)'),
-        ('dekapin', 'デカピン (25000/125000)'),
+        ('no', 'ノーレート'),
+        ('ten1', 'テンイチ'),
+        ('ten2', 'テンニ'),
+        ('ten3', 'テンサン'),
+        ('ten5', 'テンゴ'),
+        ('pin', 'テンピン'),
+        ('ryanpin', 'テンリャンピン'),
+        ('upin', 'ウーピン'),
+        ('dekapin', 'デカピン'),
+        ('custom', 'カスタム'),
+    ]
+    
+    SASHI_UMA_CHOICES = [
+        ('5-10', '5-10 (1位+10, 2位+5, 3位-5, 4位-10)'),
+        ('10-20', '10-20 (1位+20, 2位+10, 3位-10, 4位-20)'),
+        ('10-30', '10-30 (1位+30, 2位+10, 3位-10, 4位-30)'),
         ('custom', 'カスタム'),
     ]
     
     code = models.CharField(max_length=6, unique=True, default=generate_room_code, editable=False)
     created_at = models.DateTimeField(auto_now_add=True)
     # サシウマ設定
-    sashi_uma_1_2 = models.IntegerField(default=5, verbose_name="サシウマ1-2位")
-    sashi_uma_3_4 = models.IntegerField(default=10, verbose_name="サシウマ3-4位")
+    sashi_uma_type = models.CharField(max_length=10, choices=SASHI_UMA_CHOICES, default='5-10', verbose_name="サシウマタイプ")
+    sashi_uma_1_2 = models.IntegerField(default=5, verbose_name="サシウマ1-2位（カスタム用）")
+    sashi_uma_3_4 = models.IntegerField(default=10, verbose_name="サシウマ3-4位（カスタム用）")
     # レート設定
     rate_type = models.CharField(max_length=10, choices=RATE_CHOICES, default='ten5', verbose_name="レート")
-    custom_return_points = models.IntegerField(default=30000, verbose_name="カスタム返し点")
-    # 持ち点設定
+    # 持ち点・返し点設定（個別に設定可能）
     starting_points = models.IntegerField(default=25000, verbose_name="持ち点")
+    return_points = models.IntegerField(default=30000, verbose_name="返し点")
+    # 互換性のため残す（レートタイプがcustomの時に使用）
+    custom_return_points = models.IntegerField(default=30000, verbose_name="カスタム返し点")
+    # チップ設定
+    chip_point_rate = models.FloatField(default=1.0, verbose_name="チップ1枚あたりのポイント")
     # オカ設定（レートから自動計算されるが、互換性のため残す）
     oka = models.IntegerField(default=20, verbose_name="オカ")
     
-    # 互換性のためのプロパティ（既存のウマ設定）
+    def _get_sashi_uma_values(self):
+        """サシウマの値を取得（タイプに応じて）"""
+        if self.sashi_uma_type == '5-10':
+            return (5, 10)
+        elif self.sashi_uma_type == '10-20':
+            return (10, 20)
+        elif self.sashi_uma_type == '10-30':
+            return (10, 30)
+        else:  # custom
+            return (self.sashi_uma_1_2, self.sashi_uma_3_4)
+    
+    @property
+    def effective_sashi_uma_1_2(self):
+        """有効なサシウマ1-2位"""
+        return self._get_sashi_uma_values()[0]
+    
+    @property
+    def effective_sashi_uma_3_4(self):
+        """有効なサシウマ3-4位"""
+        return self._get_sashi_uma_values()[1]
+    
+    # ウマ計算（サシウマから計算）
+    # サシウマ「5-10」: 1位+10, 2位+5, 3位-5, 4位-10
+    # サシウマ「10-20」: 1位+20, 2位+10, 3位-10, 4位-20
+    # サシウマ「10-30」: 1位+30, 2位+10, 3位-10, 4位-30
     @property
     def uma_1st(self):
         """1位ウマ（サシウマから計算）"""
-        return self.sashi_uma_1_2 + self.sashi_uma_3_4
+        _, uma_3_4 = self._get_sashi_uma_values()
+        # 1位 = uma_3_4
+        return uma_3_4
     
     @property
     def uma_2nd(self):
         """2位ウマ（サシウマから計算）"""
-        return self.sashi_uma_1_2
+        uma_1_2, _ = self._get_sashi_uma_values()
+        # 2位 = uma_1_2
+        return uma_1_2
     
     @property
     def uma_3rd(self):
         """3位ウマ（サシウマから計算）"""
-        return -self.sashi_uma_1_2
+        uma_1_2, _ = self._get_sashi_uma_values()
+        # 3位 = -uma_1_2
+        return -uma_1_2
     
     @property
     def uma_4th(self):
         """4位ウマ（サシウマから計算）"""
-        return -(self.sashi_uma_1_2 + self.sashi_uma_3_4)
-    
-    @property
-    def return_points(self):
-        """返し点（レートから計算）"""
-        rate_map = {
-            'no': 25000,        # ノーレート
-            'ten1': 26000,      # テンイチ
-            'ten2': 27000,     # テンニ
-            'ten3': 28000,     # テンサン
-            'ten5': 30000,     # テンゴ
-            'pin': 35000,      # テンピン
-            'ryanpin': 45000,  # テンリャンピン
-            'upin': 75000,     # ウーピン
-            'dekapin': 125000, # デカピン
-        }
-        return rate_map.get(self.rate_type, self.custom_return_points)
+        _, uma_3_4 = self._get_sashi_uma_values()
+        # 4位 = -uma_3_4
+        return -uma_3_4
     
     @property
     def oka_points(self):
-        """オカポイント（レートから計算）"""
-        if self.rate_type == 'no':
-            return 0
-        elif self.rate_type == 'custom':
-            diff = self.return_points - self.starting_points
-            return diff // 1000 if diff > 0 else 0
-        else:
-            # 返し点と持ち点の差を1000で割った値がオカポイント
-            diff = self.return_points - self.starting_points
-            return diff // 1000 if diff > 0 else 0
+        """オカポイント（返し点と持ち点の差から計算）"""
+        diff = self.return_points - self.starting_points
+        return diff // 1000 if diff > 0 else 0
 
     class Meta:
         ordering = ['-created_at']

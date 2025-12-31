@@ -54,36 +54,14 @@
                 {% endfor %}
                 <td class="align-middle">
                     <button type="button" 
-                            class="btn btn-sm btn-outline-danger" 
+                            class="btn btn-sm btn-outline-danger delete-game-btn" 
                             data-bs-toggle="modal" 
-                            data-bs-target="#deleteGameModal{{ game_data.game.id }}">
+                            data-bs-target="#deleteGameModal"
+                            data-game-id="{{ game_data.game.id }}"
+                            data-game-number="{{ game_data.game.game_number }}"
+                            data-delete-url="{% url 'mahjong:delete_game' room.code game_data.game.id %}">
                         <i class="bi bi-trash me-1"></i>削除
                     </button>
-                    
-                    <!-- ゲーム削除確認モーダル -->
-                    <div class="modal fade" id="deleteGameModal{{ game_data.game.id }}" tabindex="-1">
-                        <div class="modal-dialog">
-                            <div class="modal-content">
-                                <div class="modal-header">
-                                    <h5 class="modal-title">ゲーム記録の削除</h5>
-                                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                                </div>
-                                <div class="modal-body">
-                                    <p>ゲーム #{{ game_data.game.game_number }} を削除しますか？</p>
-                                    <p class="text-danger"><strong>この操作は取り消せません。</strong></p>
-                                </div>
-                                <div class="modal-footer">
-                                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">キャンセル</button>
-                                    <form method="post" action="{% url 'mahjong:delete_game' room.code game_data.game.id %}" class="d-inline">
-                                        {% csrf_token %}
-                                        <button type="submit" class="btn btn-danger">
-                                            <i class="bi bi-trash me-2"></i>削除する
-                                        </button>
-                                    </form>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
                 </td>
             </tr>
             {% endfor %}
