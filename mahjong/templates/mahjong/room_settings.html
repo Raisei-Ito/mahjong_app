@@ -1,4 +1,5 @@
 {% extends 'mahjong/base.html' %}
+{% load mahjong_filters %}
 
 {% block content %}
 <div class="row justify-content-center">
@@ -132,21 +133,21 @@
                     <div class="mb-4">
                         <h5 class="mb-3"><i class="bi bi-coin me-2"></i>チップ換算率設定</h5>
                         <div class="mb-3">
-                            <label for="chip_point_rate" class="form-label fw-bold">チップ1枚あたりのポイント（pt）</label>
+                            <label for="chip_point_rate" class="form-label fw-bold">チップ1枚あたりの支払いポイント（pt）</label>
                             <input type="number" 
                                    class="form-control" 
                                    id="chip_point_rate" 
                                    name="chip_point_rate" 
-                                   value="{{ room.chip_point_rate }}"
+                                   value="{{ room.chip_point_rate|mul:100|floatformat:0 }}"
                                    min="0"
-                                   max="1000"
-                                   step="0.1"
+                                   max="100000"
+                                   step="1"
                                    required>
-                            <small class="text-muted">チップ1枚を何ptに換算するか（例: 5pt = チップ1枚 = 500円相当）</small>
+                            <small class="text-muted">チップ1枚を実際に支払うポイント数で設定します（例: 100と入力すると、チップ1枚 = 100ptとして計算されます）</small>
                         </div>
                         <div class="alert alert-secondary">
                             <strong>現在の設定:</strong><br>
-                            チップ1枚 = {{ room.chip_point_rate }}pt
+                            チップ1枚 = <strong>{{ room.chip_point_rate|mul:100|floatformat:0 }}pt</strong>（実際の支払いポイント）
                         </div>
                     </div>
                     

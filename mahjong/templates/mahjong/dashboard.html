@@ -1,4 +1,5 @@
 {% extends 'mahjong/base.html' %}
+{% load mahjong_filters %}
 
 {% block content %}
 <div class="row mb-4">
@@ -50,8 +51,8 @@
                     </div>
                     <div class="col-md-2 mb-2 mb-md-0">
                         <small class="text-muted d-block">チップ換算</small>
-                        <strong>{{ room.chip_point_rate }}pt</strong>
-                        <small class="text-muted d-block">(1枚あたり)</small>
+                        <strong>{{ room.chip_point_rate|mul:100|floatformat:0 }}pt</strong>
+                        <small class="text-muted d-block">(1枚あたり・実際の支払いポイント)</small>
                     </div>
                     <div class="col-md-2">
                         <a href="{% url 'mahjong:room_settings' room.code %}" class="btn btn-sm btn-outline-info">

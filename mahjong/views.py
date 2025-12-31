@@ -184,10 +184,11 @@ def room_dashboard(request, room_code):
         total_chips = sum(
             sr.chip_change for sr in ScoreRecord.objects.filter(player=player)
         )
-        # チップをポイントに換算
-        chip_points = total_chips * room.chip_point_rate
-        # 合計（実際に支払うべき金額をpt×100で表示）
-        total_amount_pt = (total_points + chip_points) * 100
+        # チップを実際の支払いポイントに換算
+        # chip_point_rateは100で割った値で保存されているので、計算時に100倍する
+        chip_points = total_chips * room.chip_point_rate * 100
+        # 合計（ポイントは100倍、チップも100倍した実際の支払いポイント）
+        total_amount_pt = (total_points * 100) + chip_points
         player_stats.append({
             'player': player,
             'total_points': total_points,
@@ -355,11 +356,14 @@ def room_settings(request, room_code):
             room.return_points = return_points
             
             # チップ換算率設定（バリデーション付き）
-            # 入力値はpt単位で直接受け取る
-            chip_point_rate = float(request.POST.get('chip_point_rate', 1.0))
-            if chip_point_rate < 0 or chip_point_rate > 1000:
-                raise ValueError("チップ換算率の値が範囲外です（0-1000pt）")
-            room.chip_point_rate = chip_point_rate
+            # 入力値は100倍した値で受け取り、100で割って保存する
+            # 例：入力画面で100と入力すると、データベースには1.0として保存される
+            # 計算時はそのまま使用（chip_point_rate * チップ数 = 実際の支払いポイント）
+            chip_point_rate_input = float(request.POST.get('chip_point_rate', 100.0))
+            if chip_point_rate_input < 0 or chip_point_rate_input > 100000:
+                raise ValueError("チップ換算率の値が範囲外です（0-100000pt）")
+            # 入力値を100で割って保存（データベースには1.0として保存）
+            room.chip_point_rate = chip_point_rate_input / 100.0
             
             room.save()
             messages.success(request, '設定を更新しました。')
