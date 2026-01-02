@@ -223,6 +223,16 @@ def record_score(request, room_code):
                     messages.error(request, f'入力値が無効です: {str(e)}')
                     return redirect('mahjong:record_score', room_code=room_code)
             
+            # 持ち点の合計を検証（4人全員の合計がstarting_points * 4になっているか確認）
+            total_score = sum(record.score for record in score_records)
+            expected_total = room.starting_points * 4
+            if total_score != expected_total:
+                messages.error(
+                    request, 
+                    f'持ち点の合計が正しくありません。合計: {total_score:,}点、期待値: {expected_total:,}点（{room.starting_points:,}点 × 4人）'
+                )
+                return redirect('mahjong:record_score', room_code=room_code)
+            
             # 順位を判定（持ち点の高い順、同点の場合はプレイヤー順で決定）
             # 同点時のウマオカ折半なし：同点でも順位を分ける（プレイヤー順で決定）
             # ソート: 持ち点の高い順、同点の場合はプレイヤー順（orderが小さい方が上位）
