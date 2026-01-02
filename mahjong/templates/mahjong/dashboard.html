@@ -115,6 +115,31 @@
     </div>
 </div>
 
+<!-- ゲーム削除確認モーダル -->
+<div class="modal fade" id="deleteGameModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">ゲームの削除</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p>本当にゲーム #<span id="delete-game-number"></span> を削除しますか？</p>
+                <p class="text-danger"><strong>この操作は取り消せません。</strong></p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">キャンセル</button>
+                <form method="post" id="delete-game-form" class="d-inline">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-danger">
+                        <i class="bi bi-trash me-2"></i>削除する
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
 <!-- プレイヤー統計 -->
 <div class="row mb-4">
     <div class="col-12">
@@ -154,5 +179,30 @@
         </div>
     </div>
 </div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// ゲーム削除ボタンのイベント処理（HTMXで動的に更新されるコンテンツにも対応）
+document.addEventListener('DOMContentLoaded', function() {
+    // イベント委譲を使用して、動的に追加される要素にも対応
+    document.addEventListener('click', function(e) {
+        if (e.target.closest('.delete-game-btn')) {
+            const button = e.target.closest('.delete-game-btn');
+            const gameId = button.getAttribute('data-game-id');
+            const gameNumber = button.getAttribute('data-game-number');
+            const deleteUrl = button.getAttribute('data-delete-url');
+            
+            // モーダルに情報を設定
+            document.getElementById('delete-game-number').textContent = gameNumber;
+            document.getElementById('delete-game-form').action = deleteUrl;
+            
+            // モーダルを表示
+            const modal = new bootstrap.Modal(document.getElementById('deleteGameModal'));
+            modal.show();
+        }
+    });
+});
+</script>
 {% endblock %}
 

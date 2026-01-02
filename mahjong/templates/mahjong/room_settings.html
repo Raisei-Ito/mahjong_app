@@ -58,35 +58,21 @@
                                 <small class="text-muted">3位と4位の差（例: 10）</small>
                             </div>
                         </div>
-                        <div class="alert alert-secondary">
-                            <strong>現在のウマ:</strong><br>
-                            1位: +{{ room.uma_1st }}pt, 
-                            2位: +{{ room.uma_2nd }}pt, 
-                            3位: {{ room.uma_3rd }}pt, 
-                            4位: {{ room.uma_4th }}pt
-                        </div>
                     </div>
                     
                     <!-- レート設定（参考情報） -->
                     <div class="mb-4">
                         <h5 class="mb-3"><i class="bi bi-calculator me-2"></i>レート設定（参考）</h5>
-                        <div class="alert alert-info mb-3">
-                            <small>
-                                <strong>レートの表記について:</strong><br>
-                                「(25000/35000)」は「(持ち点/返し点)」を表します。<br>
-                                レートタイプは参考情報として表示されますが、実際の計算には下記の「持ち点」と「返し点」の設定値が使用されます。
-                            </small>
-                        </div>
                         <div class="mb-3">
                             <label for="rate_type" class="form-label fw-bold">レートタイプ（参考）</label>
-                            <select class="form-select" id="rate_type" name="rate_type" onchange="updatePointsFromRate()">
+                            <select class="form-select" id="rate_type" name="rate_type" onchange="updateStartingPointsFromRate()">
                                 {% for value, label in room.RATE_CHOICES %}
                                 <option value="{{ value }}" {% if room.rate_type == value %}selected{% endif %}>
                                     {{ label }}
                                 </option>
                                 {% endfor %}
                             </select>
-                            <small class="text-muted">レートタイプを選択すると、持ち点と返し点が自動的に設定されます（上書き可能）</small>
+                            <small class="text-muted">レートタイプを選択すると、持ち点が自動的に設定されます（返し点は変更されません）</small>
                         </div>
                     </div>
                     
@@ -113,19 +99,13 @@
                                        class="form-control" 
                                        id="return_points" 
                                        name="return_points" 
-                                       value="{{ room.return_points }}"
+                                       value="{{ room.return_points|default:30000 }}"
                                        min="0"
                                        max="1000000"
                                        step="1000"
                                        required>
                                 <small class="text-muted">ポイント計算の基準点（デフォルト: 30000点）</small>
                             </div>
-                        </div>
-                        <div class="alert alert-secondary">
-                            <strong>現在の設定:</strong><br>
-                            持ち点: {{ room.starting_points }}点<br>
-                            返し点: {{ room.return_points }}点<br>
-                            オカ: +{{ room.oka_points }}pt (1位のみ)
                         </div>
                     </div>
                     
@@ -166,29 +146,27 @@
 </div>
 
 <script>
-// レートタイプから持ち点と返し点を自動設定
-function updatePointsFromRate() {
+// レートタイプから持ち点のみを自動設定（返し点は変更しない）
+function updateStartingPointsFromRate() {
     const rateType = document.getElementById('rate_type').value;
     const startingPointsInput = document.getElementById('starting_points');
-    const returnPointsInput = document.getElementById('return_points');
     
     const rateMap = {
-        'no': { starting: 25000, return: 25000 },
-        'ten1': { starting: 25000, return: 26000 },
-        'ten2': { starting: 25000, return: 27000 },
-        'ten3': { starting: 25000, return: 28000 },
-        'ten5': { starting: 25000, return: 30000 },
-        'pin': { starting: 25000, return: 35000 },
-        'ryanpin': { starting: 25000, return: 45000 },
-        'upin': { starting: 25000, return: 75000 },
-        'dekapin': { starting: 25000, return: 125000 },
-        'custom': { starting: 25000, return: 30000 }
+        'no': { starting: 25000 },
+        'ten1': { starting: 25000 },
+        'ten2': { starting: 25000 },
+        'ten3': { starting: 25000 },
+        'ten5': { starting: 25000 },
+        'pin': { starting: 25000 },
+        'ryanpin': { starting: 25000 },
+        'upin': { starting: 25000 },
+        'dekapin': { starting: 25000 },
+        'custom': { starting: 25000 }
     };
     
     const points = rateMap[rateType];
     if (points) {
         startingPointsInput.value = points.starting;
-        returnPointsInput.value = points.return;
     }
 }
 
