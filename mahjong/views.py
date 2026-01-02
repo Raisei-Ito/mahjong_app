@@ -1,11 +1,11 @@
 from django.shortcuts import render, redirect, get_object_or_404
-from django.http import JsonResponse
+from django.http import JsonResponse, Http404
 from django.views.decorators.http import require_http_methods
 from django.views.decorators.csrf import csrf_exempt
-from django.db import transaction
+from django.db import transaction, IntegrityError
 from django.contrib import messages
 from django.utils import timezone
-from .models import Room, Player, Game, ScoreRecord
+from .models import Room, Player, Game, ScoreRecord, generate_room_code
 
 
 def update_room_last_used(room):
@@ -27,20 +27,34 @@ def index(request):
 def create_room(request):
     """部屋を作成"""
     if request.method == 'POST':
-        try:
-            # 部屋を作成（codeは自動生成される）
-            room = Room.objects.create()
-            # room.codeが正しく生成されているか確認
-            if not room.code:
-                # コードが生成されていない場合は手動で生成
-                from .models import generate_room_code
-                room.code = generate_room_code()
-                room.save()
-            # リダイレクト先のURLを生成
-            return redirect('mahjong:room_setup', room_code=room.code)
-        except Exception as e:
-            messages.error(request, f'部屋の作成に失敗しました: {str(e)}')
-            return redirect('mahjong:index')
+        max_attempts = 10
+        for attempt in range(max_attempts):
+            try:
+                # 重複しないコードを生成
+                code = generate_room_code()
+                # 重複チェック
+                if Room.objects.filter(code=code).exists():
+                    continue  # 重複している場合は再試行
+                
+                # 部屋を作成
+                room = Room.objects.create(code=code)
+                # 部屋が正しく作成されたことを確認
+                if room and room.code:
+                    return redirect('mahjong:room_setup', room_code=room.code)
+            except IntegrityError:
+                # 重複エラーの場合は再試行
+                continue
+            except Exception as e:
+                # その他のエラーはログに記録
+                import logging
+                logger = logging.getLogger(__name__)
+                logger.error(f'create_room error: {str(e)}', exc_info=True)
+                messages.error(request, f'部屋の作成に失敗しました: {str(e)}')
+                return redirect('mahjong:index')
+        
+        # 最大試行回数に達した場合
+        messages.error(request, '部屋の作成に失敗しました。しばらく時間をおいて再度お試しください。')
+        return redirect('mahjong:index')
     return redirect('mahjong:index')
 
 
@@ -65,7 +79,12 @@ def join_room(request):
 
 def room_setup(request, room_code):
     """プレイヤー登録画面"""
-    room = get_object_or_404(Room, code=room_code)
+    try:
+        room = Room.objects.get(code=room_code)
+    except Room.DoesNotExist:
+        messages.error(request, f'部屋コード「{room_code}」が見つかりませんでした。部屋が削除された可能性があります。')
+        return redirect('mahjong:index')
+    
     update_room_last_used(room)
     
     if request.method == 'POST':
@@ -102,8 +121,14 @@ def room_setup(request, room_code):
         
         # プレイヤーが4人登録されたらダッシュボードへ
         # トランザクション外で確認（コミット後の状態を確認）
-        if Player.objects.filter(room=room).count() == 4:
-            return redirect('mahjong:room_dashboard', room_code=room_code)
+        # 部屋が存在することを再確認
+        try:
+            room.refresh_from_db()
+            if Player.objects.filter(room=room).count() == 4:
+                return redirect('mahjong:room_dashboard', room_code=room_code)
+        except Room.DoesNotExist:
+            messages.error(request, '部屋が見つかりませんでした。')
+            return redirect('mahjong:index')
     
     players = Player.objects.filter(room=room)
     return render(request, 'mahjong/room_setup.html', {
@@ -200,7 +225,12 @@ def record_score(request, room_code):
 def room_dashboard(request, room_code):
     """ダッシュボード画面"""
     try:
-        room = get_object_or_404(Room, code=room_code)
+        try:
+            room = Room.objects.get(code=room_code)
+        except Room.DoesNotExist:
+            messages.error(request, f'部屋コード「{room_code}」が見つかりませんでした。部屋が削除された可能性があります。')
+            return redirect('mahjong:index')
+        
         update_room_last_used(room)
         players = Player.objects.filter(room=room).order_by('order')
         

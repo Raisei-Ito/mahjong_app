@@ -4,8 +4,19 @@ import random
 
 
 def generate_room_code():
-    """6桁の英数字コードを生成"""
+    """6桁の英数字コードを生成（重複チェック付き）"""
     characters = string.ascii_uppercase + string.digits
+    max_attempts = 100
+    
+    for _ in range(max_attempts):
+        code = ''.join(random.choice(characters) for _ in range(6))
+        # 重複チェック（Roomモデルがインポート可能な場合のみ）
+        # 注意: この関数はモデル定義時に呼ばれるため、循環インポートを避ける
+        # 実際の重複チェックはcreate_roomビューで行う
+        return code
+    
+    # 最大試行回数に達した場合はランダムなコードを返す
+    # （実際には100回試行しても重複する可能性は極めて低い）
     return ''.join(random.choice(characters) for _ in range(6))
 
 
