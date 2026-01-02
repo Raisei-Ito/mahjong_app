@@ -2,19 +2,16 @@
 
 ## 24時間使用されていない部屋の自動削除
 
-24時間使用されていない部屋を自動削除する機能を実装しました。
+**注意: 自動削除機能は現在無効化されています。**
 
-### 設定方法
+24時間使用されていない部屋を自動削除する機能は実装されていますが、現在は無効化されています。
+必要に応じて、`mahjong/management/commands/cleanup_old_rooms.py`のコメントを解除して有効化できます。
 
-Fly.ioでcron jobを設定するには、以下のコマンドを実行してください：
+### 機能を有効化する場合
 
-```bash
-flyctl cron schedule "0 18 * * *" --command "python manage.py cleanup_old_rooms" --app mahjong-app
-```
+`cleanup_old_rooms.py`のコメントアウトされたコードを解除してください。
 
-このコマンドは、毎日UTC 18:00（JST 03:00）に`cleanup_old_rooms`コマンドを実行します。
-
-### 手動実行
+### 手動実行（機能が有効化されている場合）
 
 管理コマンドを手動で実行する場合：
 
@@ -26,7 +23,7 @@ flyctl ssh console --app mahjong-app -C "python manage.py cleanup_old_rooms --dr
 flyctl ssh console --app mahjong-app -C "python manage.py cleanup_old_rooms"
 ```
 
-### ローカルでのテスト
+### ローカルでのテスト（機能が有効化されている場合）
 
 ```bash
 # 削除対象を確認
