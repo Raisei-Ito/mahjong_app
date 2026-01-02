@@ -1,6 +1,7 @@
 from django.shortcuts import render, redirect, get_object_or_404
 from django.http import JsonResponse
 from django.views.decorators.http import require_http_methods
+from django.views.decorators.csrf import csrf_exempt
 from django.db import transaction
 from django.contrib import messages
 from .models import Room, Player, Game, ScoreRecord
@@ -14,8 +15,20 @@ def index(request):
 def create_room(request):
     """部屋を作成"""
     if request.method == 'POST':
-        room = Room.objects.create()
-        return redirect('mahjong:room_setup', room_code=room.code)
+        try:
+            # 部屋を作成（codeは自動生成される）
+            room = Room.objects.create()
+            # room.codeが正しく生成されているか確認
+            if not room.code:
+                # コードが生成されていない場合は手動で生成
+                from .models import generate_room_code
+                room.code = generate_room_code()
+                room.save()
+            # リダイレクト先のURLを生成
+            return redirect('mahjong:room_setup', room_code=room.code)
+        except Exception as e:
+            messages.error(request, f'部屋の作成に失敗しました: {str(e)}')
+            return redirect('mahjong:index')
     return redirect('mahjong:index')
 
 
@@ -217,6 +230,8 @@ def room_dashboard(request, room_code):
     })
 
 
+@csrf_exempt
+@require_http_methods(["GET"])
 def game_list_partial(request, room_code):
     """HTMX用のゲームリスト部分テンプレート"""
     room = get_object_or_404(Room, code=room_code)
@@ -241,6 +256,8 @@ def game_list_partial(request, room_code):
     })
 
 
+@csrf_exempt
+@require_http_methods(["GET"])
 def player_stats_partial(request, room_code):
     """HTMX用のプレイヤー統計部分テンプレート"""
     room = get_object_or_404(Room, code=room_code)

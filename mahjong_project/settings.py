@@ -152,6 +152,12 @@ SESSION_SAVE_EVERY_REQUEST = False
 # CSRF protection
 CSRF_COOKIE_HTTPONLY = True
 CSRF_USE_SESSIONS = False  # CookieベースのCSRF保護を使用
+# CSRF_TRUSTED_ORIGINS（本番環境のドメインを追加）
+csrf_trusted_origins_str = os.environ.get('CSRF_TRUSTED_ORIGINS', '')
+if csrf_trusted_origins_str:
+    CSRF_TRUSTED_ORIGINS = [origin.strip() for origin in csrf_trusted_origins_str.split(',') if origin.strip()]
+else:
+    CSRF_TRUSTED_ORIGINS = []
 
 # Additional security headers
 SECURE_REFERRER_POLICY = 'strict-origin-when-cross-origin'

@@ -126,7 +126,8 @@
                  id="player-stats-container"
                  hx-get="{% url 'mahjong:player_stats_partial' room.code %}"
                  hx-trigger="every 180s"
-                 hx-swap="innerHTML">
+                 hx-swap="innerHTML"
+                 hx-headers='{"X-Requested-With": "XMLHttpRequest"}'>
                 {% include 'mahjong/partials/player_stats.html' %}
             </div>
         </div>
@@ -146,7 +147,8 @@
                  id="game-list-container"
                  hx-get="{% url 'mahjong:game_list_partial' room.code %}"
                  hx-trigger="every 180s"
-                 hx-swap="innerHTML">
+                 hx-swap="innerHTML"
+                 hx-headers='{"X-Requested-With": "XMLHttpRequest"}'>
                 {% include 'mahjong/partials/game_list.html' %}
             </div>
         </div>
