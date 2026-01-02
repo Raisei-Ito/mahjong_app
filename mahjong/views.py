@@ -1,8 +1,7 @@
 from django.shortcuts import render, redirect, get_object_or_404
 from django.http import JsonResponse, Http404
 from django.views.decorators.http import require_http_methods
-from django.views.decorators.csrf import csrf_exempt
-from django.db import transaction, IntegrityError
+from django.db import transaction, IntegrityError, connection
 from django.contrib import messages
 from django.utils import timezone
 from .models import Room, Player, Game, ScoreRecord, generate_room_code
@@ -36,12 +35,43 @@ def create_room(request):
                 if Room.objects.filter(code=code).exists():
                     continue  # 重複している場合は再試行
                 
-                # 部屋を作成
-                room = Room.objects.create(code=code)
-                # 部屋が正しく作成されたことを確認
-                if room and room.code:
-                    return redirect('mahjong:room_setup', room_code=room.code)
-            except IntegrityError:
+                # トランザクション内で部屋を作成
+                with transaction.atomic():
+                    # 部屋を作成（明示的にcodeを指定）
+                    room = Room.objects.create(code=code)
+                    # 部屋が正しく作成されたことを確認
+                    if not room or not room.code:
+                        continue
+                    
+                    # データベースに確実に保存されているか確認
+                    room.refresh_from_db()
+                    if not room.code:
+                        continue
+                
+                # トランザクション外で部屋の存在を再確認
+                # 本番環境（複数ワーカー）でのSQLiteのマルチプロセス問題に対応するため、
+                # データベース接続を閉じて再オープンしてから確認
+                # データベース接続を確実にコミットし、最新の状態を読み取るため接続を閉じて再オープン
+                # これにより、別のワーカーで処理される可能性のある次のリクエストでも
+                # 最新のデータが確実に読み取れるようになる
+                connection.ensure_connection()
+                # SQLiteのWALモードを有効化（マルチプロセス環境での読み書き競合を減らす）
+                with connection.cursor() as cursor:
+                    cursor.execute("PRAGMA journal_mode=WAL;")
+                connection.close()
+                try:
+                    saved_room = Room.objects.get(code=code)
+                    if saved_room:
+                        # ログに記録
+                        import logging
+                        logger = logging.getLogger(__name__)
+                        logger.info(f'Room created: {code}')
+                        return redirect('mahjong:room_setup', room_code=saved_room.code)
+                except Room.DoesNotExist:
+                    # 部屋が保存されていない場合は再試行
+                    continue
+                    
+            except IntegrityError as e:
                 # 重複エラーの場合は再試行
                 continue
             except Exception as e:
@@ -322,7 +352,6 @@ def room_dashboard(request, room_code):
         return redirect('mahjong:index')
 
 
-@csrf_exempt
 @require_http_methods(["GET"])
 def game_list_partial(request, room_code):
     """HTMX用のゲームリスト部分テンプレート"""
@@ -349,7 +378,6 @@ def game_list_partial(request, room_code):
     })
 
 
-@csrf_exempt
 @require_http_methods(["GET"])
 def player_stats_partial(request, room_code):
     """HTMX用のプレイヤー統計部分テンプレート"""

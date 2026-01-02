@@ -13,7 +13,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = os.environ.get('SECRET_KEY', get_random_secret_key())
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = os.environ.get('DEBUG', 'True') == 'True'
+DEBUG = os.environ.get('DEBUG', 'False') == 'True'
 
 # ALLOWED_HOSTS設定（空白を除去して分割）
 allowed_hosts_str = os.environ.get('ALLOWED_HOSTS', '')
@@ -79,6 +79,11 @@ DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.sqlite3',
         'NAME': BASE_DIR / 'db.sqlite3',
+        'OPTIONS': {
+            # WALモードを有効化（マルチプロセス環境での読み書き競合を減らす）
+            # SQLiteのWALモードは、複数のプロセスからの同時読み取りを可能にする
+            'timeout': 20,  # ロック待機時間を延長
+        },
     }
 }
 
