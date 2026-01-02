@@ -28,6 +28,8 @@ wheels/
 local_settings.py
 db.sqlite3
 db.sqlite3-journal
+db.sqlite3-shm
+db.sqlite3-wal
 /staticfiles/
 /media/
 
@@ -45,5 +47,33 @@ db.sqlite3-journal
 # OS
 .DS_Store
 Thumbs.db
+
+# Docker
+*.log
+
+# IDE - VSCode
+.vscode/
+*.code-workspace
+
+# IDE - PyCharm
+.idea/
+*.iml
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# Coverage reports
+htmlcov/
+.coverage
+.coverage.*
+coverage.xml
+*.cover
+
+# mypy
+.mypy_cache/
+.dmypy.json
+dmypy.json
 
 

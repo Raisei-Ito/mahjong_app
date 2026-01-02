@@ -1,0 +1,24 @@
+# Render設定ファイル
+# このファイルを使用すると、Renderダッシュボードでの設定が自動化されます
+# 使用する場合は、your-app-name.onrender.comを実際のアプリ名に変更してください
+
+services:
+  - type: web
+    name: mahjong-app
+    env: python
+    buildCommand: pip install -r requirements.txt && python manage.py collectstatic --noinput
+    startCommand: gunicorn mahjong_project.wsgi:application
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.11.0
+      - key: SECRET_KEY
+        generateValue: true  # Renderが自動生成
+      - key: DEBUG
+        value: False
+      - key: ALLOWED_HOSTS
+        value: your-app-name.onrender.com  # 実際のアプリ名に変更
+      - key: CSRF_TRUSTED_ORIGINS
+        value: https://your-app-name.onrender.com  # 実際のアプリ名に変更
+
+# データベース: SQLiteを使用（追加のデータベース設定は不要）
+
