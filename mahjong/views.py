@@ -139,18 +139,36 @@ def room_setup(request, room_code):
 
 def record_score(request, room_code):
     """スコア入力画面"""
-    room = get_object_or_404(Room, code=room_code)
+    try:
+        room = Room.objects.get(code=room_code)
+    except Room.DoesNotExist:
+        messages.error(request, f'部屋コード「{room_code}」が見つかりませんでした。部屋が削除された可能性があります。')
+        return redirect('mahjong:index')
+    
     update_room_last_used(room)
     players = Player.objects.filter(room=room).order_by('order')
     
+    # プレイヤーが4人未満の場合はエラー
+    if players.count() < 4:
+        messages.error(request, 'プレイヤーが4人登録されていません。')
+        return redirect('mahjong:room_setup', room_code=room_code)
+    
     if request.method == 'POST':
-        with transaction.atomic():
-            # 次のゲーム番号を取得
-            last_game = Game.objects.filter(room=room).order_by('-game_number').first()
-            game_number = (last_game.game_number + 1) if last_game else 1
-            
-            # ゲームを作成
-            game = Game.objects.create(room=room, game_number=game_number)
+        try:
+            with transaction.atomic():
+                # トランザクション内で部屋の存在を再確認
+                try:
+                    room.refresh_from_db()
+                except Room.DoesNotExist:
+                    messages.error(request, '部屋が見つかりませんでした。部屋が削除された可能性があります。')
+                    return redirect('mahjong:index')
+                
+                # 次のゲーム番号を取得
+                last_game = Game.objects.filter(room=room).order_by('-game_number').first()
+                game_number = (last_game.game_number + 1) if last_game else 1
+                
+                # ゲームを作成
+                game = Game.objects.create(room=room, game_number=game_number)
             
             # スコア記録を作成（バリデーション付き）
             score_records = []
@@ -210,11 +228,24 @@ def record_score(request, room_code):
                 # 最終ポイント計算: 素点 + ウマ + オカ
                 record.points = base_points + uma + oka
             
-            # 保存
-            for record in score_records:
-                record.save()
-        
-        return redirect('mahjong:room_dashboard', room_code=room_code)
+                # 保存
+                for record in score_records:
+                    record.save()
+            
+            # トランザクション成功後、部屋の存在を再確認
+            try:
+                Room.objects.get(code=room_code)
+                return redirect('mahjong:room_dashboard', room_code=room_code)
+            except Room.DoesNotExist:
+                messages.error(request, '部屋が見つかりませんでした。部屋が削除された可能性があります。')
+                return redirect('mahjong:index')
+        except Exception as e:
+            # エラーが発生した場合はログに記録
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.error(f'record_score error: {str(e)}', exc_info=True)
+            messages.error(request, f'スコアの保存に失敗しました: {str(e)}')
+            return redirect('mahjong:record_score', room_code=room_code)
     
     return render(request, 'mahjong/record_score.html', {
         'room': room,
@@ -370,11 +401,21 @@ def delete_game(request, room_code, game_id):
 
 def delete_room(request, room_code):
     """部屋を削除"""
-    room = get_object_or_404(Room, code=room_code)
+    try:
+        room = Room.objects.get(code=room_code)
+    except Room.DoesNotExist:
+        messages.error(request, f'部屋コード「{room_code}」が見つかりませんでした。')
+        return redirect('mahjong:index')
     
     if request.method == 'POST':
+        # ログに記録
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.info(f'Room deleted: {room_code} by user request')
+        
+        room_code_for_message = room.code
         room.delete()
-        messages.success(request, '部屋を削除しました。')
+        messages.success(request, f'部屋「{room_code_for_message}」を削除しました。')
         return redirect('mahjong:index')
     
     return redirect('mahjong:room_dashboard', room_code=room_code)
