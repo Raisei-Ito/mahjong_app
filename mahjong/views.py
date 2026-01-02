@@ -4,7 +4,19 @@ from django.views.decorators.http import require_http_methods
 from django.views.decorators.csrf import csrf_exempt
 from django.db import transaction
 from django.contrib import messages
+from django.utils import timezone
 from .models import Room, Player, Game, ScoreRecord
+
+
+def update_room_last_used(room):
+    """部屋の最終使用時刻を更新"""
+    try:
+        if hasattr(room, 'last_used_at'):
+            room.last_used_at = timezone.now()
+            room.save(update_fields=['last_used_at'])
+    except Exception:
+        # マイグレーションが実行されていない場合など、エラーを無視
+        pass
 
 
 def index(request):
@@ -54,39 +66,42 @@ def join_room(request):
 def room_setup(request, room_code):
     """プレイヤー登録画面"""
     room = get_object_or_404(Room, code=room_code)
+    update_room_last_used(room)
     
     if request.method == 'POST':
-        # 既存のプレイヤーを削除
-        Player.objects.filter(room=room).delete()
-        
-        # 4名のプレイヤーを登録（バリデーション付き）
-        player_names = []
-        for i in range(1, 5):
-            name = request.POST.get(f'player_{i}', '').strip()
-            if name:
-                # 名前の長さと文字種をチェック
-                if len(name) > 50:
-                    messages.error(request, f'プレイヤー{i}の名前が長すぎます（最大50文字）')
-                    players = Player.objects.filter(room=room)
-                    return render(request, 'mahjong/room_setup.html', {
-                        'room': room,
-                        'players': players,
-                    })
-                player_names.append((name, i))
-        
-        if len(player_names) != 4:
-            messages.error(request, '4名のプレイヤー名を入力してください。')
-            players = Player.objects.filter(room=room)
-            return render(request, 'mahjong/room_setup.html', {
-                'room': room,
-                'players': players,
-            })
-        
-        # プレイヤーを登録
-        for name, order in player_names:
-            Player.objects.create(room=room, name=name, order=order)
+        with transaction.atomic():
+            # 既存のプレイヤーを削除
+            Player.objects.filter(room=room).delete()
+            
+            # 4名のプレイヤーを登録（バリデーション付き）
+            player_names = []
+            for i in range(1, 5):
+                name = request.POST.get(f'player_{i}', '').strip()
+                if name:
+                    # 名前の長さと文字種をチェック
+                    if len(name) > 50:
+                        messages.error(request, f'プレイヤー{i}の名前が長すぎます（最大50文字）')
+                        players = Player.objects.filter(room=room)
+                        return render(request, 'mahjong/room_setup.html', {
+                            'room': room,
+                            'players': players,
+                        })
+                    player_names.append((name, i))
+            
+            if len(player_names) != 4:
+                messages.error(request, '4名のプレイヤー名を入力してください。')
+                players = Player.objects.filter(room=room)
+                return render(request, 'mahjong/room_setup.html', {
+                    'room': room,
+                    'players': players,
+                })
+            
+            # プレイヤーを登録
+            for name, order in player_names:
+                Player.objects.create(room=room, name=name, order=order)
         
         # プレイヤーが4人登録されたらダッシュボードへ
+        # トランザクション外で確認（コミット後の状態を確認）
         if Player.objects.filter(room=room).count() == 4:
             return redirect('mahjong:room_dashboard', room_code=room_code)
     
@@ -100,6 +115,7 @@ def room_setup(request, room_code):
 def record_score(request, room_code):
     """スコア入力画面"""
     room = get_object_or_404(Room, code=room_code)
+    update_room_last_used(room)
     players = Player.objects.filter(room=room).order_by('order')
     
     if request.method == 'POST':
@@ -184,7 +200,13 @@ def record_score(request, room_code):
 def room_dashboard(request, room_code):
     """ダッシュボード画面"""
     room = get_object_or_404(Room, code=room_code)
+    update_room_last_used(room)
     players = Player.objects.filter(room=room).order_by('order')
+    
+    # プレイヤーが4人未満の場合はプレイヤー登録画面にリダイレクト
+    if players.count() < 4:
+        return redirect('mahjong:room_setup', room_code=room_code)
+    
     games = Game.objects.filter(room=room).order_by('-game_number')
     
     # 各プレイヤーの累計ポイントとチップを計算
@@ -235,6 +257,7 @@ def room_dashboard(request, room_code):
 def game_list_partial(request, room_code):
     """HTMX用のゲームリスト部分テンプレート"""
     room = get_object_or_404(Room, code=room_code)
+    update_room_last_used(room)
     players = Player.objects.filter(room=room).order_by('order')
     games = Game.objects.filter(room=room).order_by('-game_number')
     
@@ -261,6 +284,7 @@ def game_list_partial(request, room_code):
 def player_stats_partial(request, room_code):
     """HTMX用のプレイヤー統計部分テンプレート"""
     room = get_object_or_404(Room, code=room_code)
+    update_room_last_used(room)
     players = Player.objects.filter(room=room).order_by('order')
     
     # 各プレイヤーの累計ポイントとチップを計算
@@ -320,6 +344,7 @@ def delete_room(request, room_code):
 def edit_players(request, room_code):
     """プレイヤー情報を編集"""
     room = get_object_or_404(Room, code=room_code)
+    update_room_last_used(room)
     
     if request.method == 'POST':
         # 既存のプレイヤーを削除
@@ -368,6 +393,7 @@ def edit_players(request, room_code):
 def room_settings(request, room_code):
     """部屋設定を変更"""
     room = get_object_or_404(Room, code=room_code)
+    update_room_last_used(room)
     
     if request.method == 'POST':
         try:

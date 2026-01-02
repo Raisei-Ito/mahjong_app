@@ -25,4 +25,3 @@ primary_region = "nrt"  # 東京リージョン
   cpus = 1
   memory_mb = 256
 
-

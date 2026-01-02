@@ -33,6 +33,7 @@ class Room(models.Model):
     
     code = models.CharField(max_length=6, unique=True, default=generate_room_code, editable=False)
     created_at = models.DateTimeField(auto_now_add=True)
+    last_used_at = models.DateTimeField(auto_now=True, verbose_name="最終使用時刻")
     # サシウマ設定
     sashi_uma_type = models.CharField(max_length=10, choices=SASHI_UMA_CHOICES, default='5-10', verbose_name="サシウマタイプ")
     sashi_uma_1_2 = models.IntegerField(default=5, verbose_name="サシウマ1-2位（カスタム用）")
