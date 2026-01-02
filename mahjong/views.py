@@ -105,9 +105,9 @@ def record_score(request, room_code):
                     score = int(request.POST.get(f'score_{player.id}', 0))
                     chip_change = int(request.POST.get(f'chip_{player.id}', 0))
                     
-                    # スコアとチップの範囲チェック
-                    if score < 0 or score > 200000:
-                        raise ValueError(f'{player.name}の持ち点が範囲外です（0-200000点）')
+                    # スコアとチップの範囲チェック（マイナスも許可）
+                    if score < -200000 or score > 200000:
+                        raise ValueError(f'{player.name}の持ち点が範囲外です（-200000〜200000点）')
                     if abs(chip_change) > 10000:
                         raise ValueError(f'{player.name}のチップ増減が範囲外です（-10000〜10000）')
                     
@@ -238,6 +238,40 @@ def game_list_partial(request, room_code):
         'room': room,
         'players': players,
         'games_data': games_data,
+    })
+
+
+def player_stats_partial(request, room_code):
+    """HTMX用のプレイヤー統計部分テンプレート"""
+    room = get_object_or_404(Room, code=room_code)
+    players = Player.objects.filter(room=room).order_by('order')
+    
+    # 各プレイヤーの累計ポイントとチップを計算
+    player_stats = []
+    for player in players:
+        total_points = sum(
+            sr.points for sr in ScoreRecord.objects.filter(player=player)
+            if sr.points is not None
+        )
+        total_chips = sum(
+            sr.chip_change for sr in ScoreRecord.objects.filter(player=player)
+        )
+        # チップを実際の支払いポイントに換算
+        chip_points = total_chips * room.chip_point_rate * 100
+        # 合計（ポイントは100倍、チップも100倍した実際の支払いポイント）
+        total_amount_pt = (total_points * 100) + chip_points
+        player_stats.append({
+            'player': player,
+            'total_points': total_points,
+            'total_chips': total_chips,
+            'chip_points': chip_points,
+            'total_amount_pt': total_amount_pt,
+        })
+    
+    return render(request, 'mahjong/partials/player_stats.html', {
+        'room': room,
+        'players': players,
+        'player_stats': player_stats,
     })
 
 

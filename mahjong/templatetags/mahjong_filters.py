@@ -10,3 +10,4 @@ def mul(value, arg):
     except (ValueError, TypeError):
         return 0
 
+

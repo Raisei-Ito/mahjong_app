@@ -1,0 +1,39 @@
+{% load mahjong_filters %}
+<div class="table-responsive">
+    <table class="table">
+        <thead>
+            <tr>
+                <th><i class="bi bi-person-fill me-2"></i>プレイヤー</th>
+                <th><i class="bi bi-graph-up me-2"></i>累計ポイント</th>
+                <th><i class="bi bi-coin me-2"></i>累計チップ</th>
+                <th><i class="bi bi-calculator me-2"></i>合計</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for stat in player_stats %}
+            <tr>
+                <td class="fw-bold">
+                    <i class="bi bi-person-circle me-2"></i>{{ stat.player.name }}
+                </td>
+                <td>
+                    <span class="badge {% if stat.total_points >= 0 %}bg-success{% else %}bg-danger{% endif %}">
+                        {{ stat.total_points|floatformat:1 }}pt
+                    </span>
+                </td>
+                <td>
+                    <span class="badge {% if stat.total_chips >= 0 %}bg-info{% else %}bg-warning{% endif %}">
+                        {{ stat.total_chips }}チップ
+                        <small class="d-block">({{ stat.chip_points|floatformat:1 }}pt)</small>
+                    </span>
+                </td>
+                <td>
+                    <strong class="fs-5 {% if stat.total_amount_pt >= 0 %}text-success{% else %}text-danger{% endif %}">
+                        {{ stat.total_amount_pt|floatformat:0 }}pt
+                    </strong>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+

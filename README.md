@@ -14,55 +14,52 @@
 
 ## デプロイ方法
 
-### Renderでのデプロイ（推奨）
+### Fly.ioでのデプロイ（推奨）⭐
 
-1. **GitHubにリポジトリを作成**
+**Fly.ioの利点：**
+- ✅ **スリープしない** - 無料プランでも常時起動（待ち時間なし）
+- ✅ **高速な起動** - グローバルなエッジネットワーク
+- ✅ **シンプルなデプロイ** - `flyctl`コマンド一つでデプロイ
+- ✅ **無料プランあり** - 月3台の共有CPU VM（個人利用なら十分）
+- ✅ **Dockerベース** - 柔軟な設定が可能
+
+1. **Fly.io CLIをインストール**
    ```bash
-   git init
-   git add .
-   git commit -m "Initial commit"
-   git remote add origin https://github.com/yourusername/mahjong_app.git
-   git push -u origin main
+   # macOS (Homebrew)
+   brew install flyctl
+   
+   # またはインストールスクリプト
+   curl -L https://fly.io/install.sh | sh
    ```
 
-2. **Renderでアプリを作成**
-   - [Render](https://render.com)にアクセスしてアカウント作成
-   - "New +" → "Web Service" を選択
-   - GitHubリポジトリを接続
-   - 以下の設定を行う：
-     - **Name**: mahjong-app（任意）
-     - **Environment**: Python 3
-     - **Build Command**: `chmod +x build.sh && ./build.sh`
-     - **Start Command**: `gunicorn mahjong_project.wsgi`
-     - **Plan**: Free（無料プラン）
+2. **Fly.ioにログイン**
+   ```bash
+   flyctl auth login
+   ```
 
-3. **環境変数を設定**
-   Renderのダッシュボードで以下を設定：
-   - `SECRET_KEY`: `python -c "from django.core.management.utils import get_random_secret_key; print(get_random_secret_key())"` で生成
-   - `DEBUG`: `False`
-   - `ALLOWED_HOSTS`: `your-app-name.onrender.com`（Renderが自動で設定）
+3. **アプリを作成**
+   ```bash
+   cd /Users/raisei-ito/mahjong_app
+   flyctl launch --name mahjong-app --region nrt
+   ```
 
-4. **デプロイ**
-   - "Create Web Service" をクリック
-   - デプロイが完了するまで待つ（5-10分）
+4. **環境変数を設定**
+   ```bash
+   # SECRET_KEYを生成
+   python -c "from django.core.management.utils import get_random_secret_key; print(get_random_secret_key())"
+   
+   # 環境変数を設定
+   flyctl secrets set SECRET_KEY="生成されたSECRET_KEY"
+   flyctl secrets set DEBUG="False"
+   flyctl secrets set ALLOWED_HOSTS="*.fly.dev"
+   ```
 
-### Railwayでのデプロイ
+5. **デプロイ**
+   ```bash
+   flyctl deploy
+   ```
 
-1. **GitHubにリポジトリを作成**（上記と同じ）
-
-2. **Railwayでアプリを作成**
-   - [Railway](https://railway.app)にアクセスしてアカウント作成
-   - "New Project" → "Deploy from GitHub repo" を選択
-   - リポジトリを選択
-
-3. **環境変数を設定**
-   - Variables タブで以下を設定：
-     - `SECRET_KEY`: ランダムな文字列
-     - `DEBUG`: `False`
-     - `ALLOWED_HOSTS`: `*.railway.app`
-
-4. **デプロイ**
-   - 自動的にデプロイが開始されます
+詳細は`FLY_DEPLOY.md`を参照してください。
 
 ### ローカル開発
 

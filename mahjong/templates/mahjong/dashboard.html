@@ -122,44 +122,12 @@
             <div class="card-header">
                 <h4><i class="bi bi-trophy-fill me-2"></i>累計成績</h4>
             </div>
-            <div class="card-body">
-                <div class="table-responsive">
-                    <table class="table">
-                        <thead>
-                            <tr>
-                                <th><i class="bi bi-person-fill me-2"></i>プレイヤー</th>
-                                <th><i class="bi bi-graph-up me-2"></i>累計ポイント</th>
-                                <th><i class="bi bi-coin me-2"></i>累計チップ</th>
-                                <th><i class="bi bi-calculator me-2"></i>合計</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% for stat in player_stats %}
-                            <tr>
-                                <td class="fw-bold">
-                                    <i class="bi bi-person-circle me-2"></i>{{ stat.player.name }}
-                                </td>
-                                <td>
-                                    <span class="badge {% if stat.total_points >= 0 %}bg-success{% else %}bg-danger{% endif %}">
-                                        {{ stat.total_points|floatformat:1 }}pt
-                                    </span>
-                                </td>
-                                <td>
-                                    <span class="badge {% if stat.total_chips >= 0 %}bg-info{% else %}bg-warning{% endif %}">
-                                        {{ stat.total_chips }}チップ
-                                        <small class="d-block">({{ stat.chip_points|floatformat:1 }}pt)</small>
-                                    </span>
-                                </td>
-                                <td>
-                                    <strong class="fs-5 {% if stat.total_amount_pt >= 0 %}text-success{% else %}text-danger{% endif %}">
-                                        {{ stat.total_amount_pt|floatformat:0 }}pt
-                                    </strong>
-                                </td>
-                            </tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
-                </div>
+            <div class="card-body"
+                 id="player-stats-container"
+                 hx-get="{% url 'mahjong:player_stats_partial' room.code %}"
+                 hx-trigger="every 180s"
+                 hx-swap="innerHTML">
+                {% include 'mahjong/partials/player_stats.html' %}
             </div>
         </div>
     </div>
@@ -175,7 +143,10 @@
                 </h4>
             </div>
             <div class="card-body" 
-                 id="game-list-container">
+                 id="game-list-container"
+                 hx-get="{% url 'mahjong:game_list_partial' room.code %}"
+                 hx-trigger="every 180s"
+                 hx-swap="innerHTML">
                 {% include 'mahjong/partials/game_list.html' %}
             </div>
         </div>

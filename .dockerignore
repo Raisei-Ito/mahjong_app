@@ -28,12 +28,8 @@ wheels/
 local_settings.py
 db.sqlite3
 db.sqlite3-journal
-/staticfiles/
-/media/
-
-# Environment variables
-.env
-.env.local
+/media
+/staticfiles
 
 # IDE
 .vscode/
@@ -45,5 +41,21 @@ db.sqlite3-journal
 # OS
 .DS_Store
 Thumbs.db
+
+# Git
+.git/
+.gitignore
+
+# Environment
+.env
+.env.local
+
+# Fly.io
+.fly/
+fly.toml.bak
+
+# Other
+*.md
+!README.md
 
 
