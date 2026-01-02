@@ -199,57 +199,66 @@ def record_score(request, room_code):
 
 def room_dashboard(request, room_code):
     """ダッシュボード画面"""
-    room = get_object_or_404(Room, code=room_code)
-    update_room_last_used(room)
-    players = Player.objects.filter(room=room).order_by('order')
-    
-    # プレイヤーが4人未満の場合はプレイヤー登録画面にリダイレクト
-    if players.count() < 4:
-        return redirect('mahjong:room_setup', room_code=room_code)
-    
-    games = Game.objects.filter(room=room).order_by('-game_number')
-    
-    # 各プレイヤーの累計ポイントとチップを計算
-    player_stats = []
-    for player in players:
-        total_points = sum(
-            sr.points for sr in ScoreRecord.objects.filter(player=player)
-            if sr.points is not None
-        )
-        total_chips = sum(
-            sr.chip_change for sr in ScoreRecord.objects.filter(player=player)
-        )
-        # チップを実際の支払いポイントに換算
-        # chip_point_rateは100で割った値で保存されているので、計算時に100倍する
-        chip_points = total_chips * room.chip_point_rate * 100
-        # 合計（ポイントは100倍、チップも100倍した実際の支払いポイント）
-        total_amount_pt = (total_points * 100) + chip_points
-        player_stats.append({
-            'player': player,
-            'total_points': total_points,
-            'total_chips': total_chips,
-            'chip_points': chip_points,
-            'total_amount_pt': total_amount_pt,
+    try:
+        room = get_object_or_404(Room, code=room_code)
+        update_room_last_used(room)
+        players = Player.objects.filter(room=room).order_by('order')
+        
+        # プレイヤーが4人未満の場合はプレイヤー登録画面にリダイレクト
+        if players.count() < 4:
+            return redirect('mahjong:room_setup', room_code=room_code)
+        
+        games = Game.objects.filter(room=room).order_by('-game_number')
+        
+        # 各プレイヤーの累計ポイントとチップを計算
+        player_stats = []
+        for player in players:
+            total_points = sum(
+                sr.points for sr in ScoreRecord.objects.filter(player=player)
+                if sr.points is not None
+            )
+            total_chips = sum(
+                sr.chip_change for sr in ScoreRecord.objects.filter(player=player)
+            )
+            # チップを実際の支払いポイントに換算
+            # chip_point_rateは100で割った値で保存されているので、計算時に100倍する
+            chip_point_rate = getattr(room, 'chip_point_rate', 1.0) or 1.0
+            chip_points = total_chips * chip_point_rate * 100
+            # 合計（ポイントは100倍、チップも100倍した実際の支払いポイント）
+            total_amount_pt = (total_points * 100) + chip_points
+            player_stats.append({
+                'player': player,
+                'total_points': total_points,
+                'total_chips': total_chips,
+                'chip_points': chip_points,
+                'total_amount_pt': total_amount_pt,
+            })
+        
+        # 各ゲームのスコア記録をプレイヤー順に整理（初期表示用）
+        games_data = []
+        for game in games:
+            game_records = {}
+            for record in game.score_records.all():
+                game_records[record.player.id] = record
+            games_data.append({
+                'game': game,
+                'records': [game_records.get(player.id) for player in players]
+            })
+        
+        return render(request, 'mahjong/dashboard.html', {
+            'room': room,
+            'players': players,
+            'games': games,
+            'games_data': games_data,
+            'player_stats': player_stats,
         })
-    
-    # 各ゲームのスコア記録をプレイヤー順に整理（初期表示用）
-    games_data = []
-    for game in games:
-        game_records = {}
-        for record in game.score_records.all():
-            game_records[record.player.id] = record
-        games_data.append({
-            'game': game,
-            'records': [game_records.get(player.id) for player in players]
-        })
-    
-    return render(request, 'mahjong/dashboard.html', {
-        'room': room,
-        'players': players,
-        'games': games,
-        'games_data': games_data,
-        'player_stats': player_stats,
-    })
+    except Exception as e:
+        # エラーが発生した場合はログに記録して、エラーページにリダイレクト
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.error(f'room_dashboard error: {str(e)}', exc_info=True)
+        messages.error(request, f'ダッシュボードの読み込みに失敗しました: {str(e)}')
+        return redirect('mahjong:index')
 
 
 @csrf_exempt
